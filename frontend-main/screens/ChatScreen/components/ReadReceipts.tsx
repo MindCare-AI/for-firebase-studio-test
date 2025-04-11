@@ -13,23 +13,41 @@ interface ReadReceiptsProps {
 }
 
 const ReadReceipts: React.FC<ReadReceiptsProps> = ({ readBy, isUserMessage }) => {
-  if (!readBy || readBy.length === 0) return null;
+  if (!readBy || readBy.length === 0) {
+    return null;
+  }
+
+  // Check for missing properties in readBy array
+  const hasMissingData = readBy.some(
+    (read) => !read || !read.id || !read.name || !read.read_at
+  );
+
+  if (hasMissingData) {
+    console.warn("Missing read receipt data:", readBy);
+    return null; // Or display an error message if appropriate
+  }
 
   return (
     <View style={[styles.container, isUserMessage ? styles.userReceipts : styles.otherReceipts]}>
-      {readBy.length > 0 && (
-        <View style={styles.readContainer}>
-          <Icon 
-            name="checkmark-done" 
-            size={14} 
-            color={isUserMessage ? '#E0E0E0' : '#666'} 
-            style={styles.icon}
-          />
-          <Text style={[styles.readText, isUserMessage ? styles.userReadText : styles.otherReadText]}>
-            {readBy.length > 1 ? `Read by ${readBy.length}` : 'Read'}
+      <View style={styles.readContainer}>
+        <Icon
+          name="checkmark-done"
+          size={14}
+          color={isUserMessage ? '#E0E0E0' : '#666'}
+          style={styles.icon}
+        />
+        {readBy.length > 1 && (
+          <Text style={styles.readUsers}>
+            {`Read by ${readBy.length} users`}
           </Text>
-        </View>
-      )}
+        )}
+        {readBy.length === 1 && (
+          <Text style={[styles.readText, isUserMessage ? styles.userReadText : styles.otherReadText]}>
+            {`Read by ${readBy[0].name}`}
+          </Text>
+          ({readBy.map((read) => read.name).join(', ')})
+          </Text>)}
+      </View>
     </View>
   );
 };
@@ -53,14 +71,18 @@ const styles = StyleSheet.create({
   icon: {
     marginRight: 4,
   },
+  readUsers: {
+    fontSize: 12,
+    color: '#777',
+  },
   readText: {
-    fontSize: 10,
+    fontSize: 12,
   },
   userReadText: {
-    color: '#E0E0E0',
+    color: 'white',
   },
   otherReadText: {
-    color: '#666',
+    color: '#333',
   },
 });
 

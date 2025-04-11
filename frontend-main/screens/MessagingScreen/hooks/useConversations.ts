@@ -71,7 +71,6 @@ const useConversations = () => {
         name: conv.other_user_name || 'Chat',
         lastMessage: conv.last_message?.content || 'No messages yet', // Extract content
         timestamp: conv.created_at || new Date().toISOString(),
-        unreadCount: conv.unread_count || 0,
         isGroup: false,
         conversation_type: 'one_to_one',
       }));
@@ -84,7 +83,6 @@ const useConversations = () => {
         name: conv.name || 'Group Chat',
         lastMessage: conv.last_message?.content || 'No messages yet', // Extract content
         timestamp: conv.created_at || new Date().toISOString(),
-        unreadCount: conv.unread_count || 0,
         isGroup: true,
         conversation_type: 'group',
       }));

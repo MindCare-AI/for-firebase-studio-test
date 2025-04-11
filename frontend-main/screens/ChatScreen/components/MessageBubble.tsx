@@ -1,15 +1,16 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
-import Icon from 'react-native-vector-icons/Ionicons';
-import { formatTime } from '../../../utils/helpers';
-import ReactionPicker from './ReactionPicker';
-import { useAuth } from '../../../contexts/AuthContext'; 
-import { Message } from '../../../types/chat';
-import EditHistoryModal from './EditHistoryModal';
-import ReadReceipts from './ReadReceipts';
+import React, { useState, useMemo, useContext } from 'react'
+import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native'
+import Icon from 'react-native-vector-icons/Ionicons'
+import { formatTime } from '../../../utils/helpers'
+import ReactionPicker from './ReactionPicker'
+import { useAuth } from '../../../contexts/AuthContext'
+import { Message } from '../../../types/chat'
+import EditHistoryModal from './EditHistoryModal'
+import { ChatContext } from '../ChatScreen' // Import the ChatContext
+import ReadReceipts from './ReadReceipts'
 
 interface MessageBubbleProps {
-  message: Message;
+  message: Message
   onReaction: (messageId: string, reaction: string) => void;
   onRemoveReaction: (messageId: string, reaction: string) => void; // Still available if needed elsewhere
   onEdit: (messageId: string) => void;
@@ -21,12 +22,13 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
   onReaction, 
   onRemoveReaction, 
   onEdit, 
-  onDelete
+  onDelete,
 }) => {
-  const { user } = useAuth(); // Get current user
-  // Fix: compare message.sender.id with the current user's id instead of a fixed 'user' string
-  const isUserMessage = message.sender.id === (user?.id || '');
-  
+  const { user } = useAuth()
+  const { retrySendMessage } = useContext(ChatContext) // Use the retry function
+
+  const isUserMessage = message.sender.id === user?.id
+
   const [showActions, setShowActions] = useState(false);
   const [showReactions, setShowReactions] = useState(false);
   const [showEditHistory, setShowEditHistory] = useState(false); // New state for edit history
@@ -45,8 +47,8 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
         duration: 100,
         useNativeDriver: true
       })
-    ]).start();
-    
+    ]).start()
+
     setShowActions(true);
   };
 
@@ -55,99 +57,116 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
     setShowReactions(false);
   };
 
-  // Make sure to implement handling for reactions removal, e.g.:
   const handleReactionRemove = (reaction: string) => {
     onRemoveReaction(message.id, reaction);
   };
 
+  const handleRetrySend = () => {
+    if (message.id && retrySendMessage) {
+      retrySendMessage(message.id)
+    }
+  };
+
+  // Error handling and edge cases
+  const hasReactions = useMemo(() => message.reactions && Object.keys(message.reactions).length > 0, [message.reactions]);
+  const hasContent = useMemo(() => message.content && message.content.trim() !== '', [message.content]);
+
+  if (!user || !message.sender) {
+    return <Text style={styles.errorText}>Error: Missing user or sender information</Text>;
+  }
+
   return (
-    <View style={[
-      styles.container,
-      isUserMessage ? styles.userContainer : styles.otherContainer
-    ]}>
-      <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-        <TouchableOpacity 
-          onLongPress={handleLongPress}
-          onPress={() => setShowActions(false)}
-          activeOpacity={0.9}
-          delayLongPress={200}
-        >
-          <View style={[
-            styles.bubble,
-            isUserMessage ? styles.userBubble : styles.otherBubble,
-            message.status === 'failed' && styles.failedMessage
-          ]}>
-            {message.deleted ? (
-              <Text style={styles.deletedText}>Message deleted</Text>
-            ) : (
-              <>
-                <Text style={isUserMessage ? styles.userText : styles.otherText}>
-                  {message.content}
-                </Text>
-                <View style={styles.footer}>
-                  <Text style={[
-                    styles.time,
-                    isUserMessage ? styles.userTime : styles.otherTime
-                  ]}>
-                    {formatTime(message.timestamp)}
+    hasContent ? (
+      <View style={[
+        styles.container,
+        isUserMessage ? styles.userContainer : styles.otherContainer
+      ]}>
+        <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+          <TouchableOpacity
+            onLongPress={handleLongPress}
+            onPress={() => setShowActions(false)}
+            activeOpacity={0.9}
+            delayLongPress={200}
+          >
+            <View style={[
+              styles.bubble,
+              isUserMessage ? styles.userBubble : styles.otherBubble,
+            ]}>
+              {message.deleted ? (
+                <Text style={styles.deletedText}>Message deleted</Text>
+              ) : (
+                <>
+                  <Text style={isUserMessage ? styles.userText : styles.otherText}>
+                    {message.content}
                   </Text>
-                  {message.edit_history && message.edit_history.length > 0 && (
+                  <View style={styles.footer}>
                     <Text style={[
-                      styles.editedText,
-                      isUserMessage ? styles.userEditedText : styles.otherEditedText
+                      styles.time,
+                      isUserMessage ? styles.userTime : styles.otherTime
                     ]}>
-                      (edited)
+                      {formatTime(message.timestamp)}
                     </Text>
-                  )}
-                  {message.status && message.status !== 'failed' && (
-                    <Icon 
-                      name={message.status === 'read' ? 'checkmark-done' : 'checkmark'} 
-                      size={16} 
-                      color={message.status === 'read' ? '#4CD964' : (isUserMessage ? '#E0E0E0' : '#666')} 
-                      style={styles.statusIcon}
+                    {message.edit_history && message.edit_history.length > 0 && (
+                      <Text style={[
+                        styles.editedText,
+                        isUserMessage ? styles.userEditedText : styles.otherEditedText
+                      ]}>
+                        (edited)
+                      </Text>
+                    )}
+                    {message.status === 'failed' ? (
+                      <TouchableOpacity onPress={handleRetrySend} style={styles.retryButton}>
+                        <Icon name="alert-circle" size={16} color="#FF3B30" style={styles.retryIcon} />
+                        <Text style={styles.retryText}>Retry</Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <Icon
+                        name={message.status === 'read' ? 'checkmark-done' : 'checkmark'}
+                        size={16}
+                        color={message.status === 'read' ? '#4CD964' : (isUserMessage ? '#E0E0E0' : '#666')}
+                        style={styles.statusIcon}
+                      />
+                    )}
+                    <ReadReceipts
+                      readBy={((message as any).read_by || []).map((readBy: any) => ({
+                        id: readBy.user.id,
+                        name: readBy.user.name,
+                        read_at: readBy.read_at,
+                      }))}
+                      isUserMessage={isUserMessage}
                     />
-                  )}
-                  {message.status === 'failed' && (
-                    <Icon 
-                      name="alert-circle" 
-                      size={16} 
-                      color="#FF3B30" 
-                      style={styles.statusIcon}
-                    />
-                  )}
-                  {/* New: Read Receipts */}
-                  <ReadReceipts 
-                    readBy={((message as any).read_by || []).map((id: string) => ({ id, name: '', read_at: '' }))}
-                    isUserMessage={isUserMessage} 
-                  />
-                </View>
-              </>
-            )}
-          </View>
-        </TouchableOpacity>
-      </Animated.View>
+                  </View>
+                </>
+              )}
+            </View>
+          </TouchableOpacity>
+        </Animated.View>
 
       {/* Update reactions rendering */}
-      {message.reactions && Object.keys(message.reactions).length > 0 && (
+      {hasReactions && (
         <View style={[
           styles.reactionsContainer,
           isUserMessage ? styles.userReactions : styles.otherReactions
         ]}>
-          {Object.entries(message.reactions).map(([reaction, users]) => (
-            <TouchableOpacity 
-              key={reaction} 
-              onPress={() => handleReactionRemove(reaction)}
-            >
-              <Text style={styles.reaction}>
-                {reaction} {Array.isArray(users) ? users.length : 0}
-              </Text>
-            </TouchableOpacity>
-          ))}
+          {Object.entries(message.reactions).map(([reaction, users]) => {
+            const userHasReacted = Array.isArray(users) && users.some((userId: string) => userId === user.id);
+              return (
+                <TouchableOpacity
+                  key={reaction}
+                  onPress={() => userHasReacted ? handleReactionRemove(reaction) : onReaction(message.id, reaction)}
+                  style={[styles.reactionButton, userHasReacted && styles.userReactionButton]}
+                >
+                  <Text style={styles.reactionText}>
+                    {reaction} {Array.isArray(users) ? users.length : 0}
+                  </Text>
+                </TouchableOpacity>
+              )
+          })}
         </View>
       )}
 
       {showActions && (
-        <View style={[
+          <View style={[
           styles.actionsContainer,
           isUserMessage ? styles.userActions : styles.otherActions
         ]}>
@@ -210,10 +229,10 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
         }))}
         currentContent={message.content}
       />
-    </View>
+      </View>
+    ) : <Text style={styles.errorText}>Error: Empty message content</Text>
   );
 };
-
 const styles = StyleSheet.create({
   container: {
     marginBottom: 8,
@@ -230,7 +249,8 @@ const styles = StyleSheet.create({
   bubble: {
     padding: 12,
     borderRadius: 16,
-  },
+    position: 'relative', // Add position relative
+  },  
   userBubble: {
     backgroundColor: '#0B57D0', // Professional blue for user messages
     borderBottomRightRadius: 2,
@@ -264,7 +284,8 @@ const styles = StyleSheet.create({
     color: '#666',
     marginRight: 4,
   },
-  statusIcon: {
+  statusIcon: {    
+    position: 'absolute',    
     marginLeft: 4,
   },
   reactionsContainer: {
@@ -273,17 +294,28 @@ const styles = StyleSheet.create({
     marginTop: 4,
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 12,
+    borderRadius: 20,
   },
   userReactions: {
     justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0, 122, 255, 0.1)',
+    backgroundColor: 'rgba(255, 255, 255, 0.8)', // White background for user reactions
+    borderColor: '#ccc', // Add border for better visibility
+    borderWidth: 1,
   },
   otherReactions: {
     justifyContent: 'flex-start',
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    backgroundColor: 'rgba(255, 255, 255, 0.8)', // White background for other reactions
+    borderColor: '#ccc', // Add border for better visibility
+    borderWidth: 1,
   },
-  reaction: {
+  reactionButton: {    
+    paddingHorizontal: 8,    
+    paddingVertical: 4,    
+    borderRadius: 16,    
+    backgroundColor: '#eee', // Light grey background for reactions    
+    margin: 2,  
+  },  
+  reactionText: {    
     fontSize: 16,
     marginHorizontal: 2,
   },
@@ -305,13 +337,27 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   failedMessage: {
+    backgroundColor: '#FFD6CC', // Light red for failed messages
     borderColor: '#FF3B30',
     borderWidth: 1,
+  },
+  deletedBubble: {
+    backgroundColor: '#FFCDD2', // Light red background for deleted messages
+  },
+  deletedText: {
+    fontSize: 16,
+    fontStyle: 'italic',
+    color: '#727272',
+    textDecorationLine: 'line-through', // Strikethrough effect
   },
   editedText: {
     fontSize: 10,
     fontStyle: 'italic',
     marginRight: 4,
+  },
+  errorText: {
+    color: '#FF3B30',
+    fontSize: 14,
   },
   userEditedText: {
     color: '#E0E0E0',
@@ -323,7 +369,21 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontStyle: 'italic',
     color: '#999',
-  }
+  },
+  retryButton: {    
+    flexDirection: 'row',    
+    alignItems: 'center',    
+    backgroundColor: '#FFD6CC', // Light red background for retry button    
+    padding: 8,    
+    borderRadius: 8,    
+    marginTop: 4,  
+  },  
+  retryIcon: {    
+    marginRight: 4,  
+  },  
+  retryText: {    
+    color: '#FF3B30',  
+  },
 });
 
 export default MessageBubble;

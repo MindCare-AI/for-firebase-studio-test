@@ -11,6 +11,11 @@ export interface AvatarProps extends React.ComponentPropsWithoutRef<typeof Avata
   fallback?: string;
   style?: any;
   className?: string;
+  isGroup?: boolean;
+  groupMembers?: {
+    uri: string | undefined;
+    initials: string;
+  }[];
 }
 
 export const Avatar = React.forwardRef<any, AvatarProps>((props, ref) => {

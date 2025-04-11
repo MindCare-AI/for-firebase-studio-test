@@ -263,11 +263,46 @@ const useChatMessages = ({ conversationId, conversationType }: UseChatMessagesPr
     }
   }, [conversationId, inputText, accessToken, user, endpoint]);
 
-  const handleNewMessage = useCallback((newMessage: Message) => {
+  const sendReadReceipt = useCallback(async (messageId: string) => {
+    if (!accessToken) return;
+    try {
+      const url = `${API_BASE_URL}/api/v1/messaging/${endpoint}/messages/${messageId}/read_receipts/`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to send read receipt: ${response.status}`);
+      }
+    } catch (error: any) {
+      console.error('Error sending read receipt:', error);
+    }
+  }, [accessToken, endpoint]);
+
+  const handleNewMessage = useCallback((data: any) => {
+    // Basic validation to ensure we have the necessary data
+    if (!data || !data.id || !data.content || !data.sender || !data.timestamp) {
+      console.error('Invalid message data received:', data);
+      return;
+    }
+
+    const newMessage: Message = {
+      id: data.id,
+      content: data.content,
+      sender: data.sender,
+      timestamp: data.timestamp,
+      status: data.status || 'sent', // Default status if not provided
+      reactions: data.reactions || {},
+      read_by: data.read_by || [],
+    };
+
     setMessages(prev => {
       // Filter out any temporary messages with the same ID
       const filtered = prev.filter(msg =>
-        msg.id !== `temp-${newMessage.id}` && msg.id !== newMessage.id
+        msg.id !== `temp-${newMessage.id}` && msg.id !== newMessage.id,
       );
       return [newMessage, ...filtered];
     });
@@ -327,8 +362,7 @@ const useChatMessages = ({ conversationId, conversationType }: UseChatMessagesPr
         console.error('Edit message error:', err);
         setError(err.message || 'Failed to edit message');
       }
-    }
+    },
+    sendReadReceipt,
   };
 };
-
-export default useChatMessages;

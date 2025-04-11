@@ -51,9 +51,16 @@ const MessagingScreen: React.FC<Props> = ({ navigation }) => {
       ) : (
         <SectionList
           sections={[
-            { title: 'Direct Messages', data: conversations.filter(c => c.conversation_type === 'one_to_one') },
+            { title: 'Direct Messages', data: conversations
+              .filter(c => c.conversation_type === 'one_to_one' || c.conversation_type === 'direct')
+              .map(c => ({
+                ...c,
+                conversation_type: 'one_to_one' as 'one_to_one'
+              })) 
+            },
             { title: 'Group Chats', data: conversations.filter(c => c.conversation_type === 'group') }
           ]}
+
           renderItem={({ item }) => (
             <ConversationItem 
               conversation={{
@@ -61,12 +68,8 @@ const MessagingScreen: React.FC<Props> = ({ navigation }) => {
                 lastMessage: item.lastMessage || '', // now guaranteed to be string
                 timestamp: item.timestamp || '',     // default to empty string if undefined
                 unreadCount: item.unreadCount ?? 0,      // default if needed
-              }}
-              onPress={() => navigation.navigate('Chat', {
-                conversationId: String(item.id),
-                conversationType: (item.conversation_type === 'direct' || item.conversation_type === 'chatbot')
-                  ? 'one_to_one'
-                  : item.conversation_type,
+              } }
+              onPress={() => navigation.navigate('Chat', { conversationId: String(item.id), conversationType: item.conversation_type,
                 title: item.name || item.otherParticipant?.name || 'Chat',
               })}
             />

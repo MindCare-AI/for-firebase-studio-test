@@ -19,34 +19,46 @@ interface ConversationItemProps {
     lastMessage: string;
     timestamp: string;
     unreadCount: number;
-    isGroup?: boolean; // Add to distinguish between group and individual chats
+    conversation_type:  "group" | "one_to_one" ;
+    participants?: Participant[];
   };
   onPress: () => void;
 }
 
 const ConversationItem: React.FC<ConversationItemProps> = ({ conversation, onPress }) => {
   // Handle both group chats and individual chats
-  const displayName = conversation.name || (conversation.otherParticipant?.name) || "Chat";
-  const avatarInitial = (displayName.charAt(0) || "").toUpperCase();
+  let displayName = '';
+  let avatarSource = undefined;
   
-  // Determine if this is a group conversation
-  const isGroup = conversation.isGroup === true;
+  if (conversation.conversation_type === 'group') {
+    displayName = conversation.name || "Group Chat";
+  } else {
+    displayName = conversation.otherParticipant?.name || "Chat";
+    avatarSource = conversation.otherParticipant?.avatar ? { uri: conversation.otherParticipant.avatar } : undefined;
+  }
+  
+  const avatarInitial = (displayName.charAt(0) || "").toUpperCase();
   
   return (
     <TouchableOpacity 
       style={styles.container}
       onPress={onPress}
-      activeOpacity={0.7} // Add visual feedback on press
+      activeOpacity={0.7}
     >
-      {/* Use conditional rendering to completely avoid the reference error */}
-      <Avatar 
-        nativeSource={
-          !isGroup && conversation.otherParticipant?.avatar 
-            ? { uri: conversation.otherParticipant.avatar } 
-            : undefined
-        }
+      <Avatar
+        nativeSource={avatarSource}
         fallback={avatarInitial}
         style={styles.avatar} 
+        isGroup={conversation.conversation_type === 'group'}
+        groupMembers={
+          conversation.conversation_type === 'group'
+            ? conversation.participants?.map(p => ({
+                uri: p.avatar,
+                initials: (p.name || '').charAt(0).toUpperCase()
+              }))
+            : []
+        }
+
       />
       <View style={styles.content}>
         <Text style={styles.name}>{displayName}</Text>
