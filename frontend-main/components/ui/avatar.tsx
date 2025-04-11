@@ -1,6 +1,5 @@
 "use client";
 
-import * as React from "react";
 import { Platform, View, Image, Text, StyleSheet } from "react-native";
 import clsx from "clsx";
 import * as AvatarPrimitive from "@radix-ui/react-avatar";
@@ -18,56 +17,60 @@ export interface AvatarProps extends React.ComponentPropsWithoutRef<typeof Avata
   }[];
 }
 
-export const Avatar = React.forwardRef<any, AvatarProps>((props, ref) => {
-  const { nativeSource, fallback, className, style, children, ...rest } = props;
-  if (Platform.OS === "web") {
-    return (
-      <AvatarPrimitive.Root
-        ref={ref}
-        className={clsx("relative flex h-10 w-10 shrink-0 overflow-hidden rounded-full", className)}
-        style={style}
-        {...rest}
-      >
-        {children}
-      </AvatarPrimitive.Root>
-    );
-  } else {
-    // Remove web-specific props before passing to the native View.
-    const { tabIndex, onTouchStart, onTouchEnd, onTouchCancel, ...viewProps } = rest as any;
-    return (
-      <View ref={ref} style={[styles.avatar, style]} {...(viewProps as React.ComponentProps<typeof View>)}>
-        {nativeSource ? (
-          <Image source={nativeSource} style={styles.image} />
-        ) : (
-          <Text style={styles.fallbackText}>{fallback}</Text>
-        )}
-        {children}
-      </View>
-    );
-  }
+export const Avatar = React.forwardRef<any, AvatarProps>(({ fallback, className, style, isGroup, groupMembers, ...rest }, ref) => {
+  const renderAvatars = () => {
+    if (isGroup && groupMembers && groupMembers.length > 0) {
+      return (
+        <View style={styles.groupAvatars}>
+          {groupMembers.slice(0, 3).map((member, index) => (
+            <View key={index} style={[styles.groupAvatarContainer, { left: index * 15 }]}>
+              {member.uri ? (
+                <AvatarPrimitive.Image
+                  src={member.uri}
+                  alt={member.initials}
+                  className={clsx("h-8 w-8 rounded-full object-cover")}
+                />
+              ) : (
+                <AvatarPrimitive.Fallback className={clsx("h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-medium")}>
+                  {member.initials}
+                </AvatarPrimitive.Fallback>
+              )}
+            </View>
+          ))}
+          {groupMembers.length > 3 && (
+            <View style={[styles.groupAvatarContainer, { left: 3 * 15 }]}>
+              <AvatarPrimitive.Fallback className={clsx("h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-medium")}>
+                +{groupMembers.length - 3}
+              </AvatarPrimitive.Fallback>
+            </View>
+          )}
+        </View>
+      );
+    } else {
+      return (
+        <>
+          {fallback ? (
+            <AvatarPrimitive.Fallback className={clsx("h-full w-full rounded-full bg-gray-200 flex items-center justify-center text-sm font-medium")}>
+              {fallback}
+            </AvatarPrimitive.Fallback>
+          ) : null}
+        </>
+      );
+    }
+  };
+
+  return (
+    <AvatarPrimitive.Root
+      ref={ref}
+      className={clsx("relative flex h-10 w-10 shrink-0 overflow-hidden rounded-full", className)}
+      style={style}
+      {...rest}
+    >
+      {renderAvatars()}
+    </AvatarPrimitive.Root>
+  );
 });
 Avatar.displayName = "Avatar";
-
-const styles = StyleSheet.create({
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    overflow: "hidden",
-    backgroundColor: "#ccc",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  image: {
-    width: "100%",
-    height: "100%",
-    resizeMode: "cover",
-  },
-  fallbackText: {
-    fontSize: 16,
-    color: "#fff",
-  },
-});
 
 export interface AvatarImageProps extends React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Image> {}
 
@@ -82,18 +85,23 @@ export const AvatarImage = React.forwardRef<React.ElementRef<typeof AvatarPrimit
 );
 AvatarImage.displayName = "AvatarImage";
 
-export interface AvatarFallbackProps extends React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Fallback> {}
-
-export const AvatarFallback = React.forwardRef<React.ElementRef<typeof AvatarPrimitive.Fallback>, AvatarFallbackProps>(
-  ({ className, ...props }, ref) => (
-    <AvatarPrimitive.Fallback
-      ref={ref}
-      className={clsx(
-        "flex h-full w-full items-center justify-center rounded-full bg-gray-200 text-sm font-medium",
-        className
-      )}
-      {...props}
-    />
-  )
-);
-AvatarFallback.displayName = "AvatarFallback";
+const styles = StyleSheet.create({
+  groupAvatars: {
+    flexDirection: 'row',
+    position: 'relative',
+    width: '100%',
+    height: '100%',
+  },
+  groupAvatarContainer: {
+    position: 'absolute',
+    borderWidth: 2,
+    borderColor: 'white',
+    borderRadius: 100,
+    overflow: 'hidden',
+  },
+  singleAvatar: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 100,
+  },
+});

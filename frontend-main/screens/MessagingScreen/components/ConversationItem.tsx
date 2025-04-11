@@ -45,19 +45,15 @@ const ConversationItem: React.FC<ConversationItemProps> = ({ conversation, onPre
       onPress={onPress}
       activeOpacity={0.7}
     >
-      <Avatar
-        nativeSource={avatarSource}
-        fallback={avatarInitial}
-        style={styles.avatar} 
-        isGroup={conversation.conversation_type === 'group'}
-        groupMembers={
-          conversation.conversation_type === 'group'
-            ? conversation.participants?.map(p => ({
-                uri: p.avatar,
-                initials: (p.name || '').charAt(0).toUpperCase()
-              }))
-            : []
-        }
+      <Avatar style={styles.avatar} isGroup={conversation.conversation_type === 'group'} groupMembers={
+        conversation.conversation_type === 'group'
+          ? conversation.participants?.map(p => ({
+            uri: p.avatar,
+            initials: (p.name || '').charAt(0).toUpperCase()
+          }))
+          : [{ uri: avatarSource?.uri, initials: avatarInitial }]
+      }
+      fallback={avatarInitial}
 
       />
       <View style={styles.content}>
