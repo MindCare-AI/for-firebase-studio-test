@@ -16,7 +16,7 @@ const DateTimePicker = Platform.select({
 })();
 
 // Add this component for web platform
-const WebDatePicker = ({ value, onChange }) => {
+const WebDatePicker = ({ value, onChange }: { value: Date | null; onChange: (event: any, date?: Date) => void }) => {
   return (
     <input
       type="date"
@@ -40,9 +40,9 @@ const WebDatePicker = ({ value, onChange }) => {
 };
 
 const BookAppointmentScreen = () => {
-  const navigation = useNavigation<NavigationProp>();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [step, setStep] = useState(1);
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [selectedTherapist, setSelectedTherapist] = useState<any | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -112,7 +112,7 @@ const BookAppointmentScreen = () => {
 
           {Platform.OS === 'web' ? (
             <WebDatePicker
-              value={selectedDate}
+              value={selectedDate ?? null}
               onChange={handleDateSelect}
             />
           ) : (
@@ -166,7 +166,7 @@ const BookAppointmentScreen = () => {
         isOpen={isConfirmationOpen} 
         onClose={() => setIsConfirmationOpen(false)} 
         therapist={selectedTherapist} 
-        date={selectedDate} 
+        date={selectedDate ?? null}
         time={selectedTime} 
         onConfirm={handleBookAppointment} 
         isLoading={isLoading} 

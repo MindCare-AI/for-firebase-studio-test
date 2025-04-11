@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { Platform, View, Image, Text, StyleSheet } from "react-native";
 import clsx from "clsx";
 import * as AvatarPrimitive from "@radix-ui/react-avatar";

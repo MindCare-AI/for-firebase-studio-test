@@ -3,9 +3,9 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-nati
 import { useNavigation } from '@react-navigation/native';
 import { Calendar, CalendarCheck, Plus } from 'lucide-react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '@/types/navigation';
+import { AppointmentStackParamList } from '../../types/navigation'; // Update the import path if necessary
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'AppointmentManagement'>;
+type NavigationProp = NativeStackNavigationProp<AppointmentStackParamList, 'AppointmentManagement'>;
 
 // Mock data for appointments
 const APPOINTMENTS = [
@@ -36,7 +36,7 @@ const AppointmentManagementScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
 
   const formatDate = (dateString: string) => {
-    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+    const options: Intl.DateTimeFormatOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
     return new Date(dateString).toLocaleDateString(undefined, options);
   };
 
@@ -47,7 +47,7 @@ const AppointmentManagementScreen: React.FC = () => {
         <Text style={styles.headerTitle}>Your Appointments</Text>
         <TouchableOpacity
           style={styles.bookButton}
-          onPress={() => navigation.navigate('BookAppointment')} // Replace with the correct screen name
+          onPress={() => navigation.navigate('BookAppointment')} // Now valid
         >
           <Plus size={18} color="white" />
           <Text style={styles.bookButtonText}>Book Appointment</Text>

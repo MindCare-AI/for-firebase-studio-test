@@ -4,7 +4,7 @@ import { View, StyleSheet, FlatList, KeyboardAvoidingView, Platform, Alert, Acti
 import { RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useNetInfo } from '@react-native-community/netinfo';
-import { MessagingStackParamList } from '../../navigation/MessagingNavigator';
+import { MessagingStackParamList } from '../../types/navigation'; // Updated import path
 import { useChatMessages } from './hooks/useChatMessages';
 import useMessageActions from './hooks/useMessageActions';
 import MessageBubble from './components/MessageBubble';
@@ -14,7 +14,6 @@ import LoadingIndicator from '../../components/ui/LoadingIndicator';
 import ErrorMessage from '../../components/ui/ErrorMessage';
 import { Message } from '../../types/chat';
 import { useAuth } from '../../contexts/AuthContext';
-import { connectWebSocket } from '../../services/websocket';
 import { useWebSocket } from '../../services/websocket';
 
 type ChatRouteProp = RouteProp<MessagingStackParamList, 'Chat'>;
@@ -53,12 +52,11 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route, navigation }) => {
 
   const loadMoreMessagesFromApi = useCallback(async () => {
     if (!hasMoreMessages || isLoadingMore) return;
-    
     try {
       setIsLoadingMore(true);
       await loadMessages();
-    } catch (error) {
-      console.error('Failed to fetch more messages:', error);
+    } catch (err) {
+      console.error('Failed to fetch more messages:', err);
     } finally {
       setIsLoadingMore(false);
     }
@@ -66,29 +64,24 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route, navigation }) => {
 
   const handleWebSocketMessage = useCallback(
     (data: any) => {
-      console.log("[WS] Raw data received:", data);
+      console.log('[WS] Raw data received:', data);
       if (data.type === 'conversation_message' || data.message) {
         const newMsg = data.message || data;
         if (newMsg.id && newMsg.content && newMsg.sender) {
-          console.log("[WS] Adding valid message:", newMsg);
-          // Use functional update to avoid stale dependency on "messages"
-          setMessages(prev => {
-            if (!prev.some(msg => msg.id === newMsg.id)) {
-              return [newMsg, ...prev];
-            }
-            return prev;
-          });
+          console.log('[WS] Adding valid message:', newMsg);
+          setMessages(prev =>
+            prev.some(msg => msg.id === newMsg.id) ? prev : [newMsg, ...prev]
+          );
         }
       }
     },
-    [setMessages] // Removed "messages" from dependencies
+    [setMessages]
   );
 
-  const validConversationId =
-    typeof conversationId === 'string' ? conversationId.trim() : '';
+  const validConversationId = typeof conversationId === 'string' ? conversationId.trim() : '';
 
   const wsHook =
-    (title !== 'New Chat' && validConversationId !== '')
+    title !== 'New Chat' && validConversationId !== ''
       ? useWebSocket(validConversationId, handleWebSocketMessage)
       : { sendMessage: () => {}, connectionStatus: 'disconnected' };
 
@@ -104,7 +97,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route, navigation }) => {
 
   useEffect(() => {
     console.log('ChatScreen opened with:', conversationId, conversationType, title);
-  }, []);
+  }, [conversationId, conversationType, title]);
 
   const { handleReactionSelect, removeReaction } = useMessageActions({
     conversationId: String(conversationId),
@@ -116,8 +109,8 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route, navigation }) => {
       try {
         console.log(`Adding reaction ${reaction} to message ${messageId}`);
         await handleReactionSelect(reaction);
-      } catch (error) {
-        console.error('Failed to add reaction:', error);
+      } catch (err) {
+        console.error('Failed to add reaction:', err);
         Alert.alert('Error', 'Failed to add reaction');
       }
     },
@@ -134,8 +127,8 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route, navigation }) => {
           onPress: async () => {
             try {
               await deleteMessageApi(messageId);
-            } catch (error) {
-              console.error('Failed to delete message:', error);
+            } catch (err) {
+              console.error('Failed to delete message:', err);
               Alert.alert('Error', 'Failed to delete message');
             }
           },
@@ -147,7 +140,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route, navigation }) => {
 
   const handleEditMessage = useCallback(
     (messageId: string) => {
-      const message = messages.find((msg) => msg.id === messageId);
+      const message = messages.find(msg => msg.id === messageId);
       if (message) {
         setEditingMessage(message);
         setInputText(message.content);
@@ -158,13 +151,12 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route, navigation }) => {
 
   const handleSaveEdit = useCallback(async () => {
     if (!editingMessage) return;
-    
     try {
       await editMessageApi(editingMessage.id, inputText);
       setEditingMessage(null);
       setInputText('');
-    } catch (error) {
-      console.error('Failed to update message:', error);
+    } catch (err) {
+      console.error('Failed to update message:', err);
       Alert.alert('Error', 'Failed to update message');
     }
   }, [editingMessage, inputText, editMessageApi]);
@@ -204,11 +196,9 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route, navigation }) => {
 
   useEffect(() => {
     if (!netInfo.isConnected) return;
-    
     const interval = setInterval(() => {
       loadMessages();
-    }, 30000); // Change from 10000 (10s) to 30000 (30s)
-    
+    }, 30000);
     return () => clearInterval(interval);
   }, [loadMessages, netInfo.isConnected]);
 
@@ -219,37 +209,37 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route, navigation }) => {
     return null;
   };
 
-  if (loading && !messages.length) {
+  if (loading && messages.length === 0) {
     return <LoadingIndicator />;
   }
-  
+
   return (
     <View style={styles.container}>
       <ChatHeader conversation={conversation} />
-      
       {error && !loading && (
         <ErrorMessage message="Couldn't load all messages" onRetry={loadMessages} />
       )}
-      
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.content}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0}
       >
         <FlatList
-          data={messages.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())}
+          data={messages.sort(
+            (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+          )}
           renderItem={({ item }) => (
-            <MessageBubble 
-              message={item} 
+            <MessageBubble
+              message={item}
               onReaction={handleReaction}
               onRemoveReaction={removeReaction}
               onEdit={handleEditMessage}
               onDelete={handleDeleteMessage}
             />
           )}
-          keyExtractor={(item) => item.id + item.timestamp} // More unique key
+          keyExtractor={(item) => `${item.id}-${item.timestamp}`}
           inverted
-          onEndReached={hasMoreMessages ? loadMoreMessagesFromApi : null}
+          onEndReached={hasMoreMessages ? loadMoreMessagesFromApi : undefined}
           onEndReachedThreshold={0.1}
           maintainVisibleContentPosition={{
             minIndexForVisible: 0,
@@ -258,7 +248,6 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route, navigation }) => {
           ListFooterComponent={renderFooter}
           contentContainerStyle={styles.listContent}
         />
-        
         <MessageInput
           value={inputText}
           onChangeText={setInputText}

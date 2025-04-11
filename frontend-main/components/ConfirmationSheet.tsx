@@ -7,7 +7,7 @@ interface ConfirmationSheetProps {
   isOpen: boolean;
   onClose: () => void;
   therapist: any;
-  date: Date | undefined;
+  date: Date | null;  // Allow null values
   time: string | null;
   onConfirm: () => void;
   isLoading: boolean;

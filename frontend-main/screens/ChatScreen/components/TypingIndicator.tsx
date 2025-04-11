@@ -1,6 +1,6 @@
 //screens/ChatScreen/components/TypingIndicator.tsx
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Animated, StyleSheet, Easing, AppState } from 'react-native';
+import { View, Animated, StyleSheet, Easing } from 'react-native';
 
 interface TypingIndicatorProps {
   isVisible: boolean;
@@ -13,24 +13,6 @@ const TypingIndicator: React.FC<TypingIndicatorProps> = ({ isVisible }) => {
   const [visible, setVisible] = useState(isVisible);
   const timer = useRef<NodeJS.Timeout | null>(null);
 
-  useEffect(() => {
-    if (visible) {
-      startAnimation();
-      resetTimer();
-    } else {
-      stopAnimation();
-    }
-
-    return () => {
-      stopAnimation();
-      clearTimeout(timer.current as any);
-    };
-  }, [visible]);
-
-  useEffect(() => {
-    setVisible(isVisible);
-  }, [isVisible]);
-
   const startAnimation = () => {
     Animated.loop(
       Animated.sequence([
@@ -40,38 +22,37 @@ const TypingIndicator: React.FC<TypingIndicatorProps> = ({ isVisible }) => {
           easing: Easing.ease,
           useNativeDriver: true,
         }),
-          Animated.timing(dot2Opacity, {
-            toValue: 1,
-            duration: 400,
-            easing: Easing.ease,
-            useNativeDriver: true,
-          }),
-          Animated.timing(dot3Opacity, {
-            toValue: 1,
-            duration: 400,
-            easing: Easing.ease,
-            useNativeDriver: true,
-          }),
-          Animated.timing(dot1Opacity, {
-            toValue: 0.3,
-            duration: 400,
-            easing: Easing.ease,
-            useNativeDriver: true,
-          }),
-          Animated.timing(dot2Opacity, {
-            toValue: 0.3,
-            duration: 400,
-            easing: Easing.ease,
-            useNativeDriver: true,
-          }),
-          Animated.timing(dot3Opacity, {
-            toValue: 0.3,
-            duration: 400,
-            easing: Easing.ease,
-            useNativeDriver: true,
-          }),
-        ]),
-      ),
+        Animated.timing(dot2Opacity, {
+          toValue: 1,
+          duration: 400,
+          easing: Easing.ease,
+          useNativeDriver: true,
+        }),
+        Animated.timing(dot3Opacity, {
+          toValue: 1,
+          duration: 400,
+          easing: Easing.ease,
+          useNativeDriver: true,
+        }),
+        Animated.timing(dot1Opacity, {
+          toValue: 0.3,
+          duration: 400,
+          easing: Easing.ease,
+          useNativeDriver: true,
+        }),
+        Animated.timing(dot2Opacity, {
+          toValue: 0.3,
+          duration: 400,
+          easing: Easing.ease,
+          useNativeDriver: true,
+        }),
+        Animated.timing(dot3Opacity, {
+          toValue: 0.3,
+          duration: 400,
+          easing: Easing.ease,
+          useNativeDriver: true,
+        }),
+      ])
     ).start();
   };
 
@@ -79,16 +60,36 @@ const TypingIndicator: React.FC<TypingIndicatorProps> = ({ isVisible }) => {
     dot1Opacity.setValue(0.3);
     dot2Opacity.setValue(0.3);
     dot3Opacity.setValue(0.3);
-    Animated.resetAnimation(dot1Opacity);
-    Animated.resetAnimation(dot2Opacity);
-    Animated.resetAnimation(dot3Opacity);
   };
 
-  if (!visible) return null; // Return null if not visible
+  const resetTimer = () => {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => setVisible(false), 3000);
+  };
+
+  useEffect(() => {
+    if (visible) {
+      startAnimation();
+      resetTimer();
+    } else {
+      stopAnimation();
+    }
+    return () => {
+      stopAnimation();
+      if (timer.current) clearTimeout(timer.current);
+    };
+  }, [visible]);
+
+  useEffect(() => {
+    setVisible(isVisible);
+  }, [isVisible]);
+
+  if (!visible) return null;
 
   return (
     <View style={styles.container}>
-      <View style={styles.bubble}>        <Animated.View style={[styles.dot, { opacity: dot1Opacity }]} />
+      <View style={styles.bubble}>
+        <Animated.View style={[styles.dot, { opacity: dot1Opacity }]} />
         <Animated.View style={[styles.dot, { opacity: dot2Opacity }]} />
         <Animated.View style={[styles.dot, { opacity: dot3Opacity }]} />
       </View>
@@ -117,13 +118,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#666',
     marginHorizontal: 2,
   },
-});
-
-const resetTimer = () => {
-  clearTimeout(timer.current as any);
-  timer.current = setTimeout(() => setVisible(false), 3000);
-};
-
 });
 
 export default TypingIndicator;
