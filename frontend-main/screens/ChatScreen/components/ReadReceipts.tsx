@@ -43,10 +43,9 @@ const ReadReceipts: React.FC<ReadReceiptsProps> = ({ readBy, isUserMessage }) =>
         )}
         {readBy.length === 1 && (
           <Text style={[styles.readText, isUserMessage ? styles.userReadText : styles.otherReadText]}>
-            {`Read by ${readBy[0].name}`}
+            {`Read by ${readBy[0].name} (${readBy.map((read) => read.name).join(', ')})`}
           </Text>
-          ({readBy.map((read) => read.name).join(', ')})
-          </Text>)}
+        )}
       </View>
     </View>
   );
