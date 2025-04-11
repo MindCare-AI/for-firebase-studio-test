@@ -5,7 +5,7 @@ import { RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useNetInfo } from '@react-native-community/netinfo';
 import { MessagingStackParamList } from '../../navigation/MessagingNavigator';
-import useChatMessages from './hooks/useChatMessages';
+import { useChatMessages } from './hooks/useChatMessages';
 import useMessageActions from './hooks/useMessageActions';
 import MessageBubble from './components/MessageBubble';
 import MessageInput from './components/MessageInput';
